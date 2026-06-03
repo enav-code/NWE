@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admino — Platform Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080f;
+    --surface: #0e0f1a;
+    --surface2: #161726;
+    --border: #232438;
+    --accent: #e040fb;
+    --accent2: #7c4dff;
+    --text: #eaeaf5;
+    --muted: #686880;
+    --success: #4ade80;
+    --error: #f87171;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(224,64,251,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(224,64,251,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .shell { position: relative; z-index: 1; display: flex; flex: 1; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { width: 230px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 28px 0; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; padding: 0 24px 24px; border-bottom: 1px solid var(--border); }
+  .logo span { color: var(--accent); }
+  .logo small { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .nav-section { padding: 16px 12px 0; flex: 1; }
+  .nav-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 0 12px; margin-bottom: 6px; margin-top: 14px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s; border: none; background: transparent; width: 100%; text-align: left; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(224,64,251,0.12); color: var(--accent); }
+  .nav-item .icon { font-size: 15px; width: 20px; text-align: center; }
+  .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+  .user-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 10px; margin-bottom: 10px; }
+  .user-avatar { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; flex-shrink: 0; color: #fff; }
+  .user-name { font-size: 12px; font-weight: 500; }
+  .user-role { font-size: 10px; color: var(--accent); letter-spacing: 1px; }
+  .btn-logout { width: 100%; padding: 9px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn-logout:hover { border-color: var(--error); color: var(--error); }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; }
+  .page-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; }
+  .platform-tag { font-size: 11px; color: var(--accent); letter-spacing: 1px; }
+  .content { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+  /* Views */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+  .stat-box::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 14px; border-bottom: 1px solid rgba(35,36,56,0.6); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; }
+  .badge.active { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+  .badge.suspended { background: rgba(248,113,113,0.1); color: var(--error); border: 1px solid rgba(248,113,113,0.2); }
+  .badge.admino { background: rgba(224,64,251,0.15); color: var(--accent); border: 1px solid rgba(224,64,251,0.3); }
+
+  /* Buttons */
+  .btn-primary { padding: 10px 20px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-sm { padding: 5px 12px; font-size: 11px; border: none; border-radius: 6px; cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; }
+  .btn-warn { background: rgba(251,191,36,0.1); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+  .btn-warn:hover { background: rgba(251,191,36,0.2); }
+  .btn-danger { background: rgba(248,113,113,0.1); color: var(--error); border: 1px solid rgba(248,113,113,0.25); }
+  .btn-danger:hover { background: rgba(248,113,113,0.2); }
+  .btn-ok { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+  .btn-ok:hover { background: rgba(74,222,128,0.2); }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  input, select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.2s; }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+
+  .alert { padding: 11px 15px; border-radius: 9px; font-size: 12px; margin-top: 14px; display: none; }
+  .alert.error { background: rgba(248,113,113,0.1); color: var(--error); border: 1px solid rgba(248,113,113,0.25); display: block; }
+  .alert.success { background: rgba(74,222,128,0.08); color: var(--success); border: 1px solid rgba(74,222,128,0.2); display: block; }
+
+  .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+
+  .log-entry { background: var(--surface2); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 12px; line-height: 1.6; }
+  .log-time { color: var(--muted); font-size: 11px; }
+  .log-action { color: var(--accent); }
+
+  @media (max-width: 700px) {
+    .shell { flex-direction: column; }
+    .sidebar { width: 100%; }
+    .form-grid { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="sidebar">
+    <div class="logo">Work<span>Space</span><small>admino panel</small></div>
+    <div class="nav-section">
+      <div class="nav-label">Platform</div>
+      <button class="nav-item active" onclick="showView('overview')" id="nav-overview"><span class="icon">◈</span> Overview</button>
+      <button class="nav-item" onclick="showView('businesses')" id="nav-businesses"><span class="icon">⊞</span> Businesses</button>
+      <button class="nav-item" onclick="showView('logs')" id="nav-logs"><span class="icon">◎</span> Audit Logs</button>
+      <div class="nav-label">Admin</div>
+      <button class="nav-item" onclick="showView('adminos')" id="nav-adminos"><span class="icon">★</span> Adminos</button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="avatarInitial">?</div>
+        <div>
+          <div class="user-name" id="sidebarUser">—</div>
+          <div class="user-role">admino</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()">← Sign Out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Platform Overview</div>
+        <div class="platform-tag">ADMINO CONTROL PANEL</div>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Overview -->
+      <div class="view active" id="view-overview">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-box"><div class="stat-val" id="st-biz">—</div><div class="stat-lbl">Businesses</div></div>
+          <div class="stat-box"><div class="stat-val" id="st-active">—</div><div class="stat-lbl">Active</div></div>
+          <div class="stat-box"><div class="stat-val" id="st-users">—</div><div class="stat-lbl">Total Users</div></div>
+          <div class="stat-box"><div class="stat-val" id="st-adminos">—</div><div class="stat-lbl">Adminos</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ Quick Actions</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="showView('businesses')">Manage Businesses →</button>
+            <button class="btn-primary" style="background:var(--accent2)" onclick="showView('adminos')">Manage Adminos →</button>
+            <button class="btn-primary" style="background:#374151" onclick="showView('logs')">View Logs →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Businesses -->
+      <div class="view" id="view-businesses">
+        <div class="card">
+          <div class="card-title">⊞ All Businesses</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Business ID</th><th>Company</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="bizTable"><tr><td colspan="5"><div class="empty">Loading…</div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Business detail -->
+        <div class="card" id="bizDetail" style="display:none">
+          <div class="card-title" id="bizDetailTitle">Business Detail</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>User ID</th><th>Username</th><th>Role</th><th>Status</th><th>Since</th></tr></thead>
+              <tbody id="bizDetailTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add user to any business -->
+        <div class="card">
+          <div class="card-title">⊕ Add User to Business</div>
+          <div class="form-grid">
+            <div class="field"><label>Business ID</label><input id="injectBizId" placeholder="biz_xxxxxxxx"></div>
+            <div class="field"><label>Role</label>
+              <select id="injectRole"><option value="Employee">Employee</option><option value="Client">Client</option></select>
+            </div>
+            <div class="field"><label>Username</label><input id="injectUser" placeholder="username"></div>
+            <div class="field"><label>Password</label><input type="password" id="injectPass" placeholder="10+ chars"></div>
+          </div>
+          <div style="margin-top:14px"><button class="btn-primary" onclick="adminoAddUser()">Add User →</button></div>
+          <div class="alert" id="injectAlert"></div>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="view" id="view-logs">
+        <div class="card">
+          <div class="card-title">◎ Platform Audit Logs</div>
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+            <input id="logBizFilter" placeholder="Filter by business_id" style="flex:1;min-width:160px">
+            <input id="logActionFilter" placeholder="Filter by action" style="flex:1;min-width:160px">
+            <button class="btn-primary" onclick="loadLogs()">Filter</button>
+          </div>
+          <div id="logsContainer"><div class="empty">Click Filter to load logs.</div></div>
+        </div>
+      </div>
+
+      <!-- Adminos -->
+      <div class="view" id="view-adminos">
+        <div class="card">
+          <div class="card-title">★ Admino Accounts</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>User ID</th><th>Username</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+              <tbody id="adminoTable"><tr><td colspan="5"><div class="empty">Loading…</div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⊕ Create New Admino</div>
+          <div class="form-grid">
+            <div class="field"><label>Username</label><input id="newAdminoUser" placeholder="superadmin"></div>
+            <div class="field"><label>Password</label><input type="password" id="newAdminoPass" placeholder="10+ chars"></div>
+          </div>
+          <div style="margin-top:14px"><button class="btn-primary" onclick="createAdmino()">Create Admino →</button></div>
+          <div class="alert" id="adminoAlert"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('token'); }
+function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }; }
+async function api(url, opts = {}) {
+  opts.headers = { ...authHeaders(), ...(opts.headers || {}) };
+  return fetch(url, opts);
+}
+function logout() { localStorage.removeItem('token'); window.location.href = '/'; }
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+function init() {
+  const token = getToken();
+  if (!token) { window.location.href = '/'; return; }
+  let user;
+  try { user = JSON.parse(atob(token.split('.')[1])); } catch(e) { window.location.href = '/'; return; }
+  if (user.exp * 1000 < Date.now() || user.role !== 'admino') {
+    localStorage.removeItem('token');
+    window.location.href = user.role !== 'admino' ? '/dashboard' : '/';
+    return;
+  }
+  document.getElementById('sidebarUser').textContent = user.username;
+  document.getElementById('avatarInitial').textContent = user.username[0].toUpperCase();
+  loadStats();
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────
+const titles = { overview: 'Platform Overview', businesses: 'All Businesses', logs: 'Audit Logs', adminos: 'Admino Accounts' };
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+  if (name === 'businesses') loadBusinesses();
+  if (name === 'adminos') loadAdminos();
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const res = await api('/api/admino/stats');
+  if (!res.ok) return;
+  const d = await res.json();
+  document.getElementById('st-biz').textContent = d.total_businesses ?? '—';
+  document.getElementById('st-active').textContent = d.active_businesses ?? '—';
+  document.getElementById('st-users').textContent = d.total_users ?? '—';
+  document.getElementById('st-adminos').textContent = d.total_adminos ?? '—';
+}
+
+// ── Businesses ──────────────────────────────────────────────────────────────
+async function loadBusinesses() {
+  const tbody = document.getElementById('bizTable');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="empty">Loading…</div></td></tr>';
+  const res = await api('/api/admino/businesses');
+  const data = await res.json();
+  const list = data.businesses || [];
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No businesses yet.</div></td></tr>'; return; }
+  tbody.innerHTML = list.map(b => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${b.business_id}</td>
+      <td><strong>${b.company_name}</strong></td>
+      <td><span class="badge ${b.active !== false ? 'active' : 'suspended'}">${b.active !== false ? 'Active' : 'Suspended'}</span></td>
+      <td style="color:var(--muted);font-size:11px">${(b.created_at||'').slice(0,10)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-sm btn-ok" onclick="viewBiz('${b.business_id}','${b.company_name}')">View</button>
+        ${b.active !== false
+          ? `<button class="btn-sm btn-warn" onclick="suspendBiz('${b.business_id}')">Suspend</button>`
+          : `<button class="btn-sm btn-ok" onclick="reinstateBiz('${b.business_id}')">Reinstate</button>`}
+        <button class="btn-sm btn-danger" onclick="deleteBiz('${b.business_id}','${b.company_name}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function viewBiz(bizId, name) {
+  const detail = document.getElementById('bizDetail');
+  const title = document.getElementById('bizDetailTitle');
+  const tbody = document.getElementById('bizDetailTable');
+  title.textContent = `👥 ${name} — Team`;
+  detail.style.display = 'block';
+  tbody.innerHTML = '<tr><td colspan="5"><div class="empty">Loading…</div></td></tr>';
+  detail.scrollIntoView({ behavior: 'smooth' });
+
+  const res = await api(`/api/admino/business/${bizId}/team`);
+  const data = await res.json();
+  const team = data.team || [];
+  if (!team.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No users.</div></td></tr>'; return; }
+  tbody.innerHTML = team.map(u => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${u.user_id}</td>
+      <td>${u.username}</td>
+      <td><span class="badge ${u.role === 'BusinessAdmin' ? 'admino' : 'active'}">${u.role}</span></td>
+      <td><span class="badge active">Active</span></td>
+      <td style="color:var(--muted);font-size:11px">${(u.created_at||'').slice(0,10)}</td>
+    </tr>`).join('');
+}
+
+async function suspendBiz(bizId) {
+  if (!confirm('Suspend this business? All its users will be locked out.')) return;
+  const res = await api('/api/admino/suspend-business', { method: 'POST', body: JSON.stringify({ business_id: bizId }) });
+  const d = await res.json();
+  alert(d.msg); loadBusinesses(); loadStats();
+}
+
+async function reinstateBiz(bizId) {
+  const res = await api('/api/admino/reinstate-business', { method: 'POST', body: JSON.stringify({ business_id: bizId }) });
+  const d = await res.json();
+  alert(d.msg); loadBusinesses(); loadStats();
+}
+
+async function deleteBiz(bizId, name) {
+  if (!confirm(`Permanently DELETE "${name}" and all its users? This cannot be undone.`)) return;
+  const res = await api('/api/admino/delete-business', { method: 'POST', body: JSON.stringify({ business_id: bizId }) });
+  const d = await res.json();
+  alert(d.msg); loadBusinesses(); loadStats();
+}
+
+async function adminoAddUser() {
+  const btn = event.target; btn.disabled = true;
+  const alertEl = document.getElementById('injectAlert');
+  alertEl.className = 'alert';
+  const res = await api('/api/admino/add-user-to-business', {
+    method: 'POST',
+    body: JSON.stringify({
+      business_id: document.getElementById('injectBizId').value.trim(),
+      username: document.getElementById('injectUser').value.trim(),
+      password: document.getElementById('injectPass').value,
+      role: document.getElementById('injectRole').value,
+    })
+  });
+  const d = await res.json();
+  alertEl.textContent = d.msg;
+  alertEl.className = 'alert ' + (res.ok ? 'success' : 'error');
+  if (res.ok) { document.getElementById('injectUser').value = ''; document.getElementById('injectPass').value = ''; }
+  btn.disabled = false;
+}
+
+// ── Logs ────────────────────────────────────────────────────────────────────
+async function loadLogs() {
+  const biz = document.getElementById('logBizFilter').value.trim();
+  const action = document.getElementById('logActionFilter').value.trim();
+  let url = '/api/admino/logs?per_page=50';
+  if (biz) url += '&business_id=' + encodeURIComponent(biz);
+  if (action) url += '&action=' + encodeURIComponent(action);
+  const res = await api(url);
+  const data = await res.json();
+  const logs = data.logs || [];
+  const container = document.getElementById('logsContainer');
+  if (!logs.length) { container.innerHTML = '<div class="empty">No logs found.</div>'; return; }
+  container.innerHTML = logs.map(l => `
+    <div class="log-entry">
+      <span class="log-time">${l.timestamp}</span>
+      <span style="color:var(--muted)"> · </span>
+      <span class="log-action">${l.action}</span>
+      <span style="color:var(--muted)"> · actor: </span><span>${l.actor || '—'}</span>
+      ${l.business_id ? `<span style="color:var(--muted)"> · biz: </span><span style="font-size:11px">${l.business_id}</span>` : ''}
+      ${l.target ? `<span style="color:var(--muted)"> → </span><span>${l.target}</span>` : ''}
+    </div>`).join('');
+}
+
+// ── Adminos ──────────────────────────────────────────────────────────────────
+async function loadAdminos() {
+  const tbody = document.getElementById('adminoTable');
+  const res = await api('/api/admino/adminos');
+  const data = await res.json();
+  const list = data.adminos || [];
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No adminos.</div></td></tr>'; return; }
+  const me = JSON.parse(atob(getToken().split('.')[1]));
+  tbody.innerHTML = list.map(a => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${a.user_id}</td>
+      <td><strong>${a.username}</strong> ${a.user_id === me.user_id ? '<span style="font-size:10px;color:var(--accent)">(you)</span>' : ''}</td>
+      <td><span class="badge ${a.active ? 'active' : 'suspended'}">${a.active ? 'Active' : 'Inactive'}</span></td>
+      <td style="color:var(--muted);font-size:11px">${(a.created_at||'').slice(0,10)}</td>
+      <td>${a.user_id !== me.user_id
+        ? `<button class="btn-sm btn-danger" onclick="deactivateAdmino('${a.user_id}','${a.username}')">Deactivate</button>`
+        : '—'}</td>
+    </tr>`).join('');
+}
+
+async function createAdmino() {
+  const btn = event.target; btn.disabled = true;
+  const alertEl = document.getElementById('adminoAlert');
+  alertEl.className = 'alert';
+  const res = await api('/api/admino/create-admino', {
+    method: 'POST',
+    body: JSON.stringify({
+      username: document.getElementById('newAdminoUser').value.trim(),
+      password: document.getElementById('newAdminoPass').value,
+    })
+  });
+  const d = await res.json();
+  alertEl.textContent = d.msg; alertEl.className = 'alert ' + (res.ok ? 'success' : 'error');
+  if (res.ok) { document.getElementById('newAdminoUser').value = ''; document.getElementById('newAdminoPass').value = ''; loadAdminos(); }
+  btn.disabled = false;
+}
+
+async function deactivateAdmino(userId, username) {
+  if (!confirm(`Deactivate admino "${username}"?`)) return;
+  const res = await api('/api/admino/deactivate-admino', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+  const d = await res.json();
+  alert(d.msg); loadAdminos();
+}
+
+init();
+</script>
+</body>
+</html>

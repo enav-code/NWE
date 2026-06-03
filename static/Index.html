@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkSpace — Business Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #4ade80;
+    --error: #f87171;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  .hero {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 80px;
+    padding: 60px 48px;
+  }
+
+  .hero-text {
+    max-width: 480px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 380px;
+  }
+
+  /* Card / panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    width: 400px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(108,99,255,0.15), transparent 70%);
+    pointer-events: none;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .form-section { display: none; }
+  .form-section.active { display: block; }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    margin-top: 8px;
+  }
+
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .msg {
+    margin-top: 14px;
+    font-size: 12px;
+    padding: 10px 13px;
+    border-radius: 7px;
+    display: none;
+  }
+  .msg.error { background: rgba(248,113,113,0.12); color: var(--error); border: 1px solid rgba(248,113,113,0.3); display: block; }
+  .msg.success { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.25); display: block; }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .panel-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 860px) {
+    .hero { flex-direction: column; gap: 40px; }
+    .panel { width: 100%; max-width: 400px; }
+    nav { padding: 16px 24px; }
+    .hero { padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Work<span>Space</span></div>
+</nav>
+
+<div class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">Multi-tenant platform</div>
+    <h1>Your team,<br>your <em>workspace</em>.</h1>
+    <p class="hero-sub">
+      Register your business and get a fully isolated workspace.
+      Invite employees, manage clients — all under one roof.
+    </p>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('register')">New Business</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="form-section active" id="loginSection">
+      <div class="panel-title">Welcome back</div>
+      <div class="panel-sub">Sign in to your workspace.</div>
+      <div class="field"><label>Username</label><input id="loginUser" placeholder="your_username" autocomplete="username"></div>
+      <div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••••" autocomplete="current-password"></div>
+      <button class="btn" onclick="doLogin()">Sign In →</button>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+
+    <!-- REGISTER BUSINESS -->
+    <div class="form-section" id="registerSection">
+      <div class="panel-title">Register Your Business</div>
+      <div class="panel-sub">You'll be the BusinessAdmin for your new workspace.</div>
+      <div class="field"><label>Company Name</label><input id="regCompany" placeholder="Acme Corp"></div>
+      <div class="field"><label>Your Username</label><input id="regUser" placeholder="admin_handle"></div>
+      <div class="field"><label>Password</label><input id="regPass" type="password" placeholder="10+ chars, mixed types"></div>
+      <button class="btn" onclick="doRegister()">Create Workspace →</button>
+      <div class="msg" id="registerMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Redirect if already logged in
+  if (localStorage.getItem('token')) {
+    try {
+      const p = JSON.parse(atob(localStorage.getItem('token').split('.')[1]));
+      if (p.exp * 1000 > Date.now()) window.location.href = '/dashboard';
+    } catch(e) { localStorage.removeItem('token'); }
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', (i === 0) === (tab === 'login'));
+    });
+    document.getElementById('loginSection').classList.toggle('active', tab === 'login');
+    document.getElementById('registerSection').classList.toggle('active', tab === 'register');
+  }
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + type;
+  }
+
+  async function doLogin() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('loginUser').value.trim(),
+          password: document.getElementById('loginPass').value,
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+try {
+    const payload = JSON.parse(atob(data.token.split('.')[1]));
+    window.location.href = payload.role === 'admino' ? '/admino' : '/dashboard';
+} catch(e) {
+    window.location.href = '/dashboard';
+}
+      } else {
+        showMsg('loginMsg', data.msg || 'Login failed', 'error');
+      }
+    } catch(e) {
+      showMsg('loginMsg', 'Network error', 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Sign In →';
+  }
+
+  async function doRegister() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    try {
+      const res = await fetch('/api/auth/register-business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_name: document.getElementById('regCompany').value.trim(),
+          username: document.getElementById('regUser').value.trim(),
+          password: document.getElementById('regPass').value,
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+window.location.href = '/dashboard'; // register is always a BusinessAdmin
+      } else {
+        showMsg('registerMsg', data.msg || 'Registration failed', 'error');
+      }
+    } catch(e) {
+      showMsg('registerMsg', 'Network error', 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Create Workspace →';
+  }
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('loginSection').classList.contains('active')) doLogin();
+    else doRegister();
+  });
+</script>
+</body>
+</html>

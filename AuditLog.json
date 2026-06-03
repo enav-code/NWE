@@ -1,0 +1,551 @@
+[
+    {
+        "timestamp": "2026-06-01T23:59:04Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "login_success",
+        "target": "Admino",
+        "details": {
+            "role": "admino"
+        }
+    },
+    {
+        "timestamp": "2026-05-31T19:52:36Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "login_success",
+        "target": "Admino",
+        "details": {
+            "role": "admino"
+        }
+    },
+    {
+        "timestamp": "2026-05-31T16:22:39Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "login_success",
+        "target": "Admino",
+        "details": {
+            "role": "admino"
+        }
+    },
+    {
+        "timestamp": "2026-05-31T16:22:18Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "setup_admino",
+        "target": "Admino",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-31T16:18:16Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "failed_login",
+        "target": "admin",
+        "details": {
+            "known_user": false
+        }
+    },
+    {
+        "timestamp": "2026-05-28T00:08:28Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-27T00:26:10Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-27T00:24:18Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:30:52Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:29:54Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:23:51Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:15:03Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:13:44Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:12:46Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:11:28Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:05:56Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:05:40Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:04:22Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:04:09Z",
+        "actor": "testadmin",
+        "action": "login_success",
+        "target": "testadmin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T18:03:04Z",
+        "actor": "system",
+        "action": "failed_login",
+        "target": "admin",
+        "details": {
+            "known_user": true
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:59:36Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T17:54:09Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T17:54:00Z",
+        "actor": "admin",
+        "action": "login_success",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T17:53:44Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:53:44Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:53:44Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:53:44Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:53:43Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:47:20Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:47:20Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:47:19Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:47:11Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:42:01Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:42:01Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:42:01Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:42:00Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:41:59Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:41:57Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:41:56Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:41:56Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:41:56Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:05Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/register",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:05Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:04Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/register",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:04Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:03Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/register",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:03Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/register",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:02Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:40:00Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T17:36:22Z",
+        "actor": "system",
+        "action": "csrf_denied",
+        "target": "/login",
+        "details": {
+            "ip": "127.0.0.1"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T05:02:01Z",
+        "actor": "admin",
+        "action": "unhandled_exception",
+        "target": "/admin/permissions",
+        "details": {
+            "error": "PermissionError"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T04:35:45.860719Z",
+        "actor": "admin",
+        "action": "force_logout",
+        "target": "all_sessions",
+        "details": {
+            "count": 0,
+            "include_current": false,
+            "exclude_roles": [
+                "admin"
+            ]
+        }
+    },
+    {
+        "timestamp": "2026-05-25T04:24:43.882020Z",
+        "actor": "admin",
+        "action": "delete_user",
+        "target": "adminr",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:58:18.070390Z",
+        "actor": "admin",
+        "action": "force_logout",
+        "target": "all_sessions",
+        "details": {
+            "count": 1,
+            "include_current": false
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:54:34.237771Z",
+        "actor": "admin",
+        "action": "force_logout",
+        "target": "all_sessions",
+        "details": {
+            "count": 1,
+            "include_current": false
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:49:33.220027Z",
+        "actor": "admin",
+        "action": "force_logout",
+        "target": "all_sessions",
+        "details": {
+            "count": 0,
+            "include_current": false
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:49:21.829644Z",
+        "actor": "admin",
+        "action": "edit_user",
+        "target": "admin",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:22:16.840059Z",
+        "actor": "admin",
+        "action": "delete_user",
+        "target": "4",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:22:15.934830Z",
+        "actor": "admin",
+        "action": "delete_user",
+        "target": "3",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:22:15.072074Z",
+        "actor": "admin",
+        "action": "delete_user",
+        "target": "2",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:22:13.888832Z",
+        "actor": "admin",
+        "action": "delete_user",
+        "target": "1",
+        "details": {}
+    },
+    {
+        "timestamp": "2026-05-25T03:15:37.938868Z",
+        "actor": "admin",
+        "action": "create_user",
+        "target": "4",
+        "details": {
+            "role": "viewer"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:15:33.399253Z",
+        "actor": "admin",
+        "action": "create_user",
+        "target": "3",
+        "details": {
+            "role": "viewer"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:15:29.789325Z",
+        "actor": "admin",
+        "action": "create_user",
+        "target": "2",
+        "details": {
+            "role": "viewer"
+        }
+    },
+    {
+        "timestamp": "2026-05-25T03:15:25.377851Z",
+        "actor": "admin",
+        "action": "create_user",
+        "target": "1",
+        "details": {
+            "role": "viewer"
+        }
+    }
+]

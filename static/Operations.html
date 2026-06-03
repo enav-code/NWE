@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Operations Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <h3>OPS</h3>
+            <button onclick="goBack()">Back</button>
+            <button onclick="goAdmin()">Users</button>
+            <button onclick="refreshOperations()">Refresh</button>
+        </div>
+
+        <div class="main">
+            <div class="topbar">
+                <h2>Operations Panel</h2>
+            </div>
+
+            <section class="panel">
+                <h4>System Stats</h4>
+                <div id="stats"></div>
+            </section>
+
+            <section class="panel">
+                <h4>Audit Logs</h4>
+                <div id="logs" class="log-list"></div>
+                <div class="pager" id="logsPager">
+                    <button onclick="logsPrev()">Prev</button>
+                    <span id="logsPageInfo"></span>
+                    <button onclick="logsNext()">Next</button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h4>Permission Matrix</h4>
+                <div id="permissions" class="table-wrap"></div>
+            </section>
+
+            <section class="panel">
+                <h4>Active Sessions</h4>
+                <div class="session-actions">
+                    <button onclick="forceLogoutAll()">Force Logout Non-Admins</button>
+                    <button onclick="loadSessions()">Refresh Sessions</button>
+                </div>
+                <div id="sessions" class="table-wrap"></div>
+            </section>
+
+            <section class="panel">
+                <h4>Backups</h4>
+                <div class="session-actions">
+                    <button onclick="restoreBackup('store')">Restore Store Backup</button>
+                    <button onclick="restoreBackup('audit')">Restore Audit Backup</button>
+                    <button onclick="loadBackups()">Refresh Backups</button>
+                </div>
+                <div id="backups" class="table-wrap"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="/static/js/shared.js"></script>
+    <script src="/static/js/operations.js"></script>
+    <script>
+        (async () => {
+            await loadCSRF();
+            await initOperations();
+        })();
+    </script>
+</body>
+</html>
