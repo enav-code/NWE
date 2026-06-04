@@ -428,7 +428,8 @@ async function loadAdminos() {
       <td><span class="badge ${a.active ? 'active' : 'suspended'}">${a.active ? 'Active' : 'Inactive'}</span></td>
       <td style="color:var(--muted);font-size:11px">${(a.created_at||'').slice(0,10)}</td>
       <td>${a.user_id !== me.user_id
-        ? `<button class="btn-sm btn-danger" onclick="deactivateAdmino('${a.user_id}','${a.username}')">Deactivate</button>`
+        ? `<button class="btn-sm btn-warn" onclick="deactivateAdmino('${a.user_id}','${a.username}')">Deactivate</button>
+<button class="btn-sm btn-danger" onclick="deleteAdmino('${a.user_id}','${a.username}')">Delete</button>`
         : '—'}</td>
     </tr>`).join('');
 }
@@ -455,6 +456,13 @@ async function deactivateAdmino(userId, username) {
   const res = await api('/api/admino/deactivate-admino', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
   const d = await res.json();
   alert(d.msg); loadAdminos();
+}
+async function deleteAdmino(userId, username) {
+  if (!confirm(`Permanently DELETE admino "${username}"? This cannot be undone.`)) return;
+  const res = await api('/api/admino/delete-admino', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+  const d = await res.json();
+  alert(d.msg);
+  loadAdminos();
 }
 
 init();
