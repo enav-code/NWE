@@ -347,3 +347,11 @@ def _assert_username_unique(store, username):
     for a in store["adminos"].values():
         if a["username"] == username:
             raise ValueError("username already taken")
+
+
+def delete_admino(user_id):
+    store = load_store()
+    if user_id not in store["adminos"]:
+        raise ValueError("admino not found")
+    del store["adminos"][user_id]
+    save_store(store)
