@@ -36,7 +36,7 @@ ASSIGNABLE_ROLES = {"Employee", "Client"}
 # ================= GOOGLE SSO =================
 
 GOOGLE_CLIENT_ID = os.environ.get("77051269767-iv2mkdt5vhlpcuqookcqib1ssiqtc0oc.apps.googleusercontent.com", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("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", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
 GOOGLE_REDIRECT_URI = os.environ.get(
     "GOOGLE_REDIRECT_URI",
