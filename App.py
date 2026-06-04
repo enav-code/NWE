@@ -1,6 +1,7 @@
 import os
 from flask import Flask, send_from_directory
 from werkzeug.exceptions import HTTPException
+from routes.google import google_bp
 
 import Config
 from routes.auth import auth_bp
@@ -13,6 +14,7 @@ app.config["SECRET_KEY"] = Config.SECRET_KEY
 app.register_blueprint(auth_bp)
 app.register_blueprint(team_bp)
 app.register_blueprint(admino_bp)
+app.register_blueprint(google_bp)
 
 
 @app.errorhandler(HTTPException)
@@ -34,6 +36,10 @@ def dashboard():
 @app.route("/admino")
 def admino_panel():
     return send_from_directory("static", "admino.html")
+
+@app.route("/onboarding")
+def onboarding():
+    return send_from_directory("static", "onboarding.html")
 
 if __name__ == "__main__":
     app.run(port=3000, debug=Config.DEBUG)

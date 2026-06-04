@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome — StratView</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #4ade80;
+    --error: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none;
+  }
+  .card { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 440px; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; margin-bottom: 28px; }
+  .logo span { color: var(--accent); }
+  h2 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .choice {
+    padding: 20px; border: 2px solid var(--border); border-radius: 12px;
+    cursor: pointer; transition: all 0.2s; text-align: center; background: transparent;
+    color: var(--text);
+  }
+  .choice:hover { border-color: var(--accent); }
+  .choice.selected { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+  .choice-icon { font-size: 28px; margin-bottom: 8px; }
+  .choice-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+  .choice-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .section { display: none; margin-bottom: 20px; }
+  .section.active { display: block; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  input { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 13px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.2s; width: 100%; }
+  input:focus { border-color: var(--accent); }
+  .btn { width: 100%; padding: 13px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .alert { padding: 11px 15px; border-radius: 9px; font-size: 12px; margin-top: 14px; display: none; }
+  .alert.error { background: rgba(248,113,113,0.1); color: var(--error); border: 1px solid rgba(248,113,113,0.25); display: block; }
+  .alert.success { background: rgba(74,222,128,0.08); color: var(--success); border: 1px solid rgba(74,222,128,0.2); display: block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Strat<span>View</span></div>
+  <h2>Welcome aboard!</h2>
+  <p class="sub">You're signed in with Google. What would you like to do?</p>
+
+  <div class="choices">
+    <button class="choice" onclick="selectChoice('create')">
+      <div class="choice-icon">🏢</div>
+      <div class="choice-title">Create Business</div>
+      <div class="choice-sub">Start a new workspace</div>
+    </button>
+    <button class="choice" onclick="selectChoice('join')">
+      <div class="choice-icon">👥</div>
+      <div class="choice-title">Join Business</div>
+      <div class="choice-sub">Use an invite code</div>
+    </button>
+  </div>
+
+  <!-- Create business -->
+  <div class="section" id="createSection">
+    <div class="field">
+      <label>Company Name</label>
+      <input id="companyName" placeholder="Acme Corp">
+    </div>
+  </div>
+
+  <!-- Join business -->
+  <div class="section" id="joinSection">
+    <div class="field">
+      <label>Invite Code</label>
+      <input id="inviteCode" placeholder="Enter your invite code">
+    </div>
+  </div>
+
+  <button class="btn" id="continueBtn" onclick="continueFlow()" style="display:none">Continue →</button>
+  <div class="alert" id="alert"></div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const tempToken = params.get('t');
+  if (!tempToken) window.location.href = '/';
+
+  let selectedChoice = null;
+
+  function selectChoice(choice) {
+    selectedChoice = choice;
+    document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    document.getElementById('createSection').classList.toggle('active', choice === 'create');
+    document.getElementById('joinSection').classList.toggle('active', choice === 'join');
+    document.getElementById('continueBtn').style.display = 'block';
+  }
+
+  async function continueFlow() {
+    const btn = document.getElementById('continueBtn');
+    const alertEl = document.getElementById('alert');
+    alertEl.className = 'alert';
+    btn.disabled = true; btn.textContent = 'Please wait…';
+
+    const body = {
+      temp_token: tempToken,
+      choice: selectedChoice,
+      company_name: document.getElementById('companyName').value.trim(),
+      invite_code: document.getElementById('inviteCode').value.trim(),
+    };
+
+    const res = await fetch('/api/auth/google/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      localStorage.setItem('token', data.token);
+      window.location.href = '/dashboard';
+    } else {
+      alertEl.textContent = data.msg || 'Something went wrong';
+      alertEl.className = 'alert error';
+      btn.disabled = false; btn.textContent = 'Continue →';
+    }
+  }
+</script>
+</body>
+</html>
