@@ -47,7 +47,9 @@ if __name__ == "__main__":
     print(f"  DEBUG: {debug_mode}")
     print(f"  HTTPS: {use_https}")
     print(f"  SECRET_KEY: {'SET' if os.environ.get('SECRET_KEY') else 'NOT SET'}")
-    print(f"  URL: {'https' if use_https else 'http'}://localhost:{'3000' if use_https else '5000'}")
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "5000" if not use_https else "3000"))
+    print(f"  URL: {'https' if use_https else 'http'}://{host}:{port}")
     print()
     
     if use_https:
@@ -57,6 +59,6 @@ if __name__ == "__main__":
         except ImportError:
             print("ERROR: HTTPS requires cryptography: pip install cryptography")
             sys.exit(1)
-        app.run(host="127.0.0.1", port=3000, debug=debug_mode, ssl_context=ssl_context)
+        app.run(host=host, port=port, debug=debug_mode, ssl_context=ssl_context)
     else:
-        app.run(host="127.0.0.1", port=5000, debug=debug_mode)
+        app.run(host=host, port=port, debug=debug_mode)

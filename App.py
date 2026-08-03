@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timezone
 from flask import Flask, send_from_directory, request
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 from routes.google import google_bp
 
 import Config
@@ -14,6 +15,7 @@ from routes.Admino import admino_bp
 
 app = Flask(__name__, static_folder="static")
 app.config["SECRET_KEY"] = Config.SECRET_KEY
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(team_bp)
@@ -28,7 +30,16 @@ def _get_client_ip():
     forwarded_for = request.headers.get("X-Forwarded-For", "")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
-    return request.headers.get("X-Real-IP") or request.remote_addr or "unknown"
+
+    real_ip = request.headers.get("X-Real-IP", "") or request.headers.get("CF-Connecting-IP", "")
+    if real_ip:
+        return real_ip.strip()
+
+    remote_addr = request.remote_addr or ""
+    if remote_addr:
+        return remote_addr
+
+    return "unknown"
 
 
 def _log_visit():
@@ -193,4 +204,6 @@ def onboarding():
     return send_from_directory("static", "onboarding.html")
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=Config.DEBUG)
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(host=host, port=port, debug=Config.DEBUG)
