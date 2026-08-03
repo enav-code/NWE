@@ -126,7 +126,7 @@ def log_visit_and_enforce_csrf():
         "/api/auth/google/callback",
     }
 
-    if request.path in exempt_paths:
+    if request.path in exempt_paths or request.path.startswith("/api/auth"):
         return
 
     token = request.headers.get("X-CSRF-Token", "")

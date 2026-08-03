@@ -1,5 +1,15 @@
 [
     {
+        "timestamp": "2026-08-03T21:25:35Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "failed_login",
+        "target": "friend@example.com",
+        "details": {
+            "known_user": false
+        }
+    },
+    {
         "timestamp": "2026-06-28T01:40:12Z",
         "actor": "system",
         "business_id": null,
