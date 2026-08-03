@@ -1,5 +1,4 @@
 from flask import Blueprint, request, g
-from werkzeug.security import generate_password_hash
 
 from Security import (
     api_errors,
@@ -35,8 +34,7 @@ def add_user():
         return {"msg": err}, 400
 
     biz_id = g.user["business_id"]
-    hashed = generate_password_hash(password)
-    user_id = add_user_to_business(biz_id, username, hashed, role)
+    user_id = add_user_to_business(biz_id, username, password, role)
 
     log_security_event("add_user", username, {"role": role, "new_user_id": user_id})
     return {"msg": "user created", "user_id": user_id}

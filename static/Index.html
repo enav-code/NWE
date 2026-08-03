@@ -164,6 +164,26 @@
     margin-bottom: 16px;
   }
 
+  .input-action {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .input-action input {
+    flex: 1;
+  }
+  .btn-sm {
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .btn-sm:hover { background: rgba(255,255,255,0.12); }
+
   label {
     display: block;
     font-size: 11px;
@@ -268,8 +288,18 @@
       <div class="panel-title">Welcome back</div>
       <div class="panel-sub">Sign in to your workspace.</div>
       <div class="field"><label>Username</label><input id="loginUser" placeholder="your_username" autocomplete="username"></div>
-      <div class="field"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••••" autocomplete="current-password"></div>
-      <button class="btn" onclick="doLogin()">Sign In →</button>
+      <div class="field">
+        <label>Password</label>
+        <div class="input-action">
+          <input id="loginPass" type="password" placeholder="••••••••••" autocomplete="current-password">
+          <button class="btn-sm" type="button" onclick="togglePassword('loginPass', this)">Show</button>
+        </div>
+      </div>
+      <div class="field" style="display:flex;align-items:center;gap:10px;">
+        <input id="rememberMe" type="checkbox" style="margin:0;">
+        <label for="rememberMe" style="margin:0;font-size:12px;color:var(--muted);">Remember me for 14 days</label>
+      </div>
+      <button class="btn" id="loginBtn" type="button" onclick="doLogin()">Sign In →</button>
       <div class="msg" id="loginMsg"></div>
       <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
   <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -288,8 +318,15 @@
       <div class="panel-sub">You'll be the BusinessAdmin for your new workspace.</div>
       <div class="field"><label>Company Name</label><input id="regCompany" placeholder="Acme Corp"></div>
       <div class="field"><label>Your Username</label><input id="regUser" placeholder="admin_handle"></div>
-      <div class="field"><label>Password</label><input id="regPass" type="password" placeholder="10+ chars, mixed types"></div>
-      <button class="btn" onclick="doRegister()">Create Workspace →</button>
+      <div class="field">
+        <label>Password</label>
+        <div class="input-action">
+          <input id="regPass" type="password" placeholder="10+ chars, mixed types">
+          <button class="btn-sm" type="button" onclick="togglePassword('regPass', this)">Show</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Use at least 10 characters for stronger security.</div>
+      <button class="btn" id="registerBtn" type="button" onclick="doRegister()">Create Workspace →</button>
       <div class="msg" id="registerMsg"></div>
       <div style="display:flex;align-items:center;gap:10px;margin:16px 0">
   <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -305,11 +342,53 @@
 </div>
 
 <script>
+  let csrfToken = "";
+
+  function getCookie(name) {
+    return document.cookie.split('; ').reduce((acc, cookie) => {
+      const index = cookie.indexOf('=');
+      const key = index < 0 ? cookie : cookie.slice(0, index);
+      const value = index < 0 ? '' : cookie.slice(index + 1);
+      return key === name ? decodeURIComponent(value) : acc;
+    }, '');
+  }
+
+  function syncTokenFromCookie() {
+    const cookieToken = getCookie('token');
+    const storedToken = localStorage.getItem('token');
+    let validStored = false;
+
+    if (storedToken) {
+      try {
+        const payload = JSON.parse(atob(storedToken.split('.')[1]));
+        validStored = payload.exp * 1000 > Date.now();
+      } catch (e) {
+        validStored = false;
+      }
+    }
+
+    if (!validStored && cookieToken) {
+      localStorage.setItem('token', cookieToken);
+    }
+  }
+
+  async function loadCsrfToken() {
+    try {
+      const res = await fetch('/csrf-token');
+      if (!res.ok) return;
+      const data = await res.json();
+      csrfToken = data.csrf_token || '';
+    } catch (e) {
+      console.warn('CSRF token load failed', e);
+    }
+  }
+
   // Redirect if already logged in
+  syncTokenFromCookie();
   if (localStorage.getItem('token')) {
     try {
-      const p = JSON.parse(atob(localStorage.getItem('token').split('.')[1]));
-      if (p.exp * 1000 > Date.now()) window.location.href = '/dashboard';
+      const payload = JSON.parse(atob(localStorage.getItem('token').split('.')[1]));
+      if (payload.exp * 1000 > Date.now()) window.location.href = payload.role === 'admino' ? '/admino' : '/dashboard';
     } catch(e) { localStorage.removeItem('token'); }
   }
 
@@ -321,34 +400,54 @@
     document.getElementById('registerSection').classList.toggle('active', tab === 'register');
   }
 
+  function togglePassword(fieldId, button) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    const isPassword = field.type === 'password';
+    field.type = isPassword ? 'text' : 'password';
+    button.textContent = isPassword ? 'Hide' : 'Show';
+  }
+
   function showMsg(id, text, type) {
     const el = document.getElementById(id);
     el.textContent = text;
     el.className = 'msg ' + type;
   }
 
+  function clearMsg(id) {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.className = 'msg';
+  }
+
   async function doLogin() {
-    const btn = event.target;
+    const btn = document.getElementById('loginBtn');
+    clearMsg('loginMsg');
     btn.disabled = true;
     btn.textContent = 'Signing in…';
+    if (!csrfToken) await loadCsrfToken();
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           username: document.getElementById('loginUser').value.trim(),
           password: document.getElementById('loginPass').value,
+          remember: document.getElementById('rememberMe').checked,
         })
       });
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('token', data.token);
-try {
-    const payload = JSON.parse(atob(data.token.split('.')[1]));
-    window.location.href = payload.role === 'admino' ? '/admino' : '/dashboard';
-} catch(e) {
-    window.location.href = '/dashboard';
-}
+        try {
+          const payload = JSON.parse(atob(data.token.split('.')[1]));
+          window.location.href = payload.role === 'admino' ? '/admino' : '/dashboard';
+        } catch(e) {
+          window.location.href = '/dashboard';
+        }
       } else {
         showMsg('loginMsg', data.msg || 'Login failed', 'error');
       }
@@ -360,13 +459,18 @@ try {
   }
 
   async function doRegister() {
-    const btn = event.target;
+    const btn = document.getElementById('registerBtn');
+    clearMsg('registerMsg');
     btn.disabled = true;
     btn.textContent = 'Creating…';
+    if (!csrfToken) await loadCsrfToken();
     try {
       const res = await fetch('/api/auth/register-business', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({
           company_name: document.getElementById('regCompany').value.trim(),
           username: document.getElementById('regUser').value.trim(),
@@ -376,7 +480,7 @@ try {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('token', data.token);
-window.location.href = '/dashboard'; // register is always a BusinessAdmin
+        window.location.href = '/dashboard'; // register is always a BusinessAdmin
       } else {
         showMsg('registerMsg', data.msg || 'Registration failed', 'error');
       }
@@ -386,6 +490,8 @@ window.location.href = '/dashboard'; // register is always a BusinessAdmin
     btn.disabled = false;
     btn.textContent = 'Create Workspace →';
   }
+
+  loadCsrfToken();
 
   // Enter key support
   document.addEventListener('keydown', e => {

@@ -7,6 +7,10 @@ Run this instead of: python App.py
 import os
 import sys
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # 1. Ensure SECRET_KEY is set
 if not os.environ.get("SECRET_KEY"):
     print("=" * 70)
@@ -27,7 +31,12 @@ if not os.environ.get("SECRET_KEY"):
     print("\n" + "=" * 70 + "\n")
 
 # 2. Start the Flask app
+from supabase import create_client
 from App import app
+
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+supabase = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
 
 if __name__ == "__main__":
     debug_mode = os.environ.get("FLASK_ENV") != "production"

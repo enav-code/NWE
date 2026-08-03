@@ -322,6 +322,12 @@
 
       <!-- ── Overview ── -->
       <div class="view active" id="view-home">
+        <div class="card">
+          <div class="card-title">Welcome back, <span id="welcomeName">there</span></div>
+          <p style="color:var(--muted);line-height:1.7;margin-top:8px">
+            Your workspace is ready. View team status, update your dashboard, or open support from the sidebar.
+          </p>
+        </div>
         <div class="stats-row" id="statsRow"></div>
         <div class="card">
           <div class="card-title">🏢 Workspace Info</div>
@@ -410,7 +416,43 @@
 <script>
 // ── Auth ──────────────────────────────────────────────────────────────────
 
-function getToken() { return localStorage.getItem('token'); }
+let csrfToken = "";
+
+function getCookie(name) {
+  return document.cookie.split('; ').reduce((acc, cookie) => {
+    const index = cookie.indexOf('=');
+    const key = index < 0 ? cookie : cookie.slice(0, index);
+    const value = index < 0 ? '' : cookie.slice(index + 1);
+    return key === name ? decodeURIComponent(value) : acc;
+  }, '');
+}
+
+async function loadCsrfToken() {
+  try {
+    const res = await fetch('/csrf-token', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const data = await res.json();
+    csrfToken = data.csrf_token || '';
+  } catch (e) {
+    console.warn('Failed to load CSRF token', e);
+  }
+}
+
+function getToken() {
+  const stored = localStorage.getItem('token');
+  if (stored) {
+    const decoded = decodeToken(stored);
+    if (decoded && decoded.exp * 1000 > Date.now()) {
+      return stored;
+    }
+  }
+  const cookieToken = getCookie('token');
+  if (cookieToken) {
+    localStorage.setItem('token', cookieToken);
+    return cookieToken;
+  }
+  return null;
+}
 
 function decodeToken(token) {
   try {
@@ -419,16 +461,26 @@ function decodeToken(token) {
 }
 
 function authHeaders() {
-  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+  };
 }
 
 async function api(url, opts = {}) {
-  opts.headers = { ...authHeaders(), ...(opts.headers || {}) };
+  opts.credentials = 'same-origin';
+  opts.headers = {
+    ...authHeaders(),
+    ...(opts.headers || {}),
+    'X-CSRF-Token': csrfToken,
+  };
   return fetch(url, opts);
 }
 
 function logout() {
   localStorage.removeItem('token');
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   window.location.href = '/';
 }
 
@@ -456,6 +508,7 @@ function initDashboard() {
 
   // Company tag
   document.getElementById('companyTag').textContent = USER.company_name + ' · ' + USER.business_id;
+  document.getElementById('welcomeName').textContent = USER.username;
 
   // Conditionally show admin nav items
   if (USER.role === 'BusinessAdmin') {
@@ -613,7 +666,10 @@ async function deactivate(userId) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────
-initDashboard();
+(async () => {
+  await loadCsrfToken();
+  initDashboard();
+})();
 </script>
 </body>
 </html>

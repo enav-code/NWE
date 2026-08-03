@@ -8,7 +8,7 @@ import jwt
 from flask import request, g
 
 import Config
-from Storage import append_audit
+from Storage import append_audit, get_profile_from_access_token
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +51,25 @@ def decode_jwt(token):
     return jwt.decode(token, Config.SECRET_KEY, algorithms=[Config.JWT_ALGORITHM])
 
 
+def create_csrf_token():
+    payload = {
+        "csrf": True,
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=Config.JWT_EXPIRY_HOURS),
+    }
+    return jwt.encode(payload, Config.SECRET_KEY, algorithm=Config.JWT_ALGORITHM)
+
+
+def verify_csrf_token(token):
+    if not token:
+        return False
+    try:
+        payload = jwt.decode(token, Config.SECRET_KEY, algorithms=[Config.JWT_ALGORITHM])
+        return payload.get("csrf") is True
+    except Exception:
+        return False
+
+
 def get_token_from_request():
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
@@ -65,7 +84,7 @@ def current_user():
     try:
         return decode_jwt(token)
     except Exception:
-        return None
+        return get_profile_from_access_token(token)
 
 
 # ---------------------------------------------------------------------------

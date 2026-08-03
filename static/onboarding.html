@@ -94,9 +94,21 @@
 </div>
 
 <script>
+  let csrfToken = "";
+
+  async function loadCsrfToken() {
+    try {
+      const res = await fetch('/csrf-token');
+      if (!res.ok) return;
+      const data = await res.json();
+      csrfToken = data.csrf_token || '';
+    } catch (e) {
+      console.warn('CSRF token load failed', e);
+    }
+  }
+
   const params = new URLSearchParams(window.location.search);
-  const tempToken = params.get('t');
-  if (!tempToken) window.location.href = '/';
+  const tempToken = params.get('t') || '';
 
   let selectedChoice = null;
 
@@ -114,17 +126,31 @@
     const alertEl = document.getElementById('alert');
     alertEl.className = 'alert';
     btn.disabled = true; btn.textContent = 'Please wait…';
+    if (!csrfToken) await loadCsrfToken();
+
+    if (!selectedChoice) {
+      alertEl.textContent = 'Please choose whether to create or join a business.';
+      alertEl.className = 'alert error';
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      return;
+    }
 
     const body = {
-      temp_token: tempToken,
       choice: selectedChoice,
       company_name: document.getElementById('companyName').value.trim(),
       invite_code: document.getElementById('inviteCode').value.trim(),
     };
+    if (tempToken) {
+      body.temp_token = tempToken;
+    }
 
     const res = await fetch('/api/auth/google/complete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
       body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -138,6 +164,8 @@
       btn.disabled = false; btn.textContent = 'Continue →';
     }
   }
+
+  loadCsrfToken();
 </script>
 </body>
 </html>

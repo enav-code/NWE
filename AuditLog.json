@@ -1,5 +1,15 @@
 [
     {
+        "timestamp": "2026-06-28T01:40:12Z",
+        "actor": "system",
+        "business_id": null,
+        "action": "login_success",
+        "target": "Admino",
+        "details": {
+            "role": "admino"
+        }
+    },
+    {
         "timestamp": "2026-06-01T23:59:04Z",
         "actor": "system",
         "business_id": null,

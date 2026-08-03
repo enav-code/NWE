@@ -1,4 +1,11 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://nhgaxciimpqgxwjxehul.supabase.co")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", os.environ.get("SUPABASE_KEY", ""))
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", os.environ.get("SUPABASE_KEY", ""))
 
 # ================= SECURITY =================
 
@@ -38,9 +45,14 @@ ASSIGNABLE_ROLES = {"Employee", "Client"}
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
+SUPABASE_REST_URL = os.environ.get(
+    "SUPABASE_REST_URL",
+    "https://nhgaxciimpqgxwjxehul.supabase.co/rest/v1/profiles",
+)
+
 GOOGLE_REDIRECT_URI = os.environ.get(
     "GOOGLE_REDIRECT_URI",
-    "https://stratview.pythonanywhere.com/api/auth/google/callback"
+    "http://localhost:5000/api/auth/google/callback"
 )
 
 

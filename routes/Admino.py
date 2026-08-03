@@ -1,10 +1,8 @@
 from flask import Blueprint, request, g
-from werkzeug.security import generate_password_hash
 
 from Security import (
     admino_required,
     api_errors,
-    create_jwt,
     log_security_event,
     password_policy_error,
 )
@@ -79,10 +77,11 @@ def business_team(biz_id):
 def suspend_business():
     body = request.get_json() or {}
     biz_id = (body.get("business_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
     if not biz_id:
         return {"msg": "business_id is required"}, 400
     set_business_active(biz_id, False)
-    log_security_event("suspend_business", biz_id)
+    log_security_event("suspend_business", biz_id, {"reason": reason, "admino": g.user["username"]})
     return {"msg": "business suspended"}
 
 
@@ -92,10 +91,11 @@ def suspend_business():
 def reinstate_business():
     body = request.get_json() or {}
     biz_id = (body.get("business_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
     if not biz_id:
         return {"msg": "business_id is required"}, 400
     set_business_active(biz_id, True)
-    log_security_event("reinstate_business", biz_id)
+    log_security_event("reinstate_business", biz_id, {"reason": reason, "admino": g.user["username"]})
     return {"msg": "business reinstated"}
 
 
@@ -105,10 +105,11 @@ def reinstate_business():
 def remove_business():
     body = request.get_json() or {}
     biz_id = (body.get("business_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
     if not biz_id:
         return {"msg": "business_id is required"}, 400
     delete_business(biz_id)
-    log_security_event("delete_business", biz_id)
+    log_security_event("delete_business", biz_id, {"reason": reason, "admino": g.user["username"]})
     return {"msg": "business deleted"}
 
 
@@ -131,7 +132,7 @@ def add_user():
     if err:
         return {"msg": err}, 400
 
-    user_id = add_user_to_business(biz_id, username, generate_password_hash(password), role)
+    user_id = add_user_to_business(biz_id, username, password, role)
     log_security_event("admino_add_user", username, {"business_id": biz_id, "role": role})
     return {"msg": "user created", "user_id": user_id}
 
@@ -160,7 +161,7 @@ def make_admino():
     if err:
         return {"msg": err}, 400
 
-    user_id = create_admino(username, generate_password_hash(password))
+    user_id = create_admino(username, password)
     log_security_event("create_admino", username, {"created_by": g.user["username"]})
     return {"msg": "admino created", "user_id": user_id}
 
@@ -171,13 +172,30 @@ def make_admino():
 def remove_admino():
     body = request.get_json() or {}
     user_id = (body.get("user_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
     if not user_id:
         return {"msg": "user_id is required"}, 400
     if user_id == g.user["user_id"]:
         return {"msg": "you cannot deactivate yourself"}, 400
     deactivate_admino(user_id)
-    log_security_event("deactivate_admino", user_id)
+    log_security_event("deactivate_admino", user_id, {"reason": reason, "admino": g.user["username"]})
     return {"msg": "admino deactivated"}
+
+
+@admino_bp.route("/delete-admino", methods=["POST"])
+@api_errors
+@admino_required
+def destroy_admino():
+    body = request.get_json() or {}
+    user_id = (body.get("user_id") or "").strip()
+    reason = (body.get("reason") or "").strip()
+    if not user_id:
+        return {"msg": "user_id is required"}, 400
+    if user_id == g.user["user_id"]:
+        return {"msg": "you cannot delete yourself"}, 400
+    delete_admino(user_id)
+    log_security_event("delete_admino", user_id, {"reason": reason, "admino": g.user["username"]})
+    return {"msg": "admino deleted"}
 
 
 # ── Audit logs (all businesses) ───────────────────────────────────────────────
