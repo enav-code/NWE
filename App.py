@@ -100,7 +100,33 @@ def parse_extraction(filename, content):
 
 @app.route("/")
 def index():
+    if "user" not in session:
+        return redirect(url_for("login"))
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get("/login")
+def login():
+    if "user" in session:
+        return redirect(url_for("index"))
+    return send_from_directory(app.static_folder, "login.html")
+
+
+@app.get("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect(url_for("login"))
+    return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get("/terms")
+def terms():
+    return send_from_directory(app.static_folder, "terms.html")
+
+
+@app.get("/privacy")
+def privacy():
+    return send_from_directory(app.static_folder, "privacy.html")
 
 
 @app.get("/auth/google")
@@ -145,7 +171,7 @@ def google_callback():
         return jsonify({"error": "Could not retrieve Google profile"}), 502
     profile = profile_response.json()
     session["user"] = {key: profile.get(key, "") for key in ("sub", "name", "email", "picture")}
-    return redirect("/")
+    return redirect(url_for("dashboard"))
 
 
 @app.post("/auth/logout")
