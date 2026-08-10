@@ -1,1 +1,7 @@
 
+.env
+keeply.db
+uploads/
+__pycache__/
+*.pyc
+
