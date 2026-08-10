@@ -20,7 +20,17 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "local-development-key-change-me")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/auth/google/callback")
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"{APP_BASE_URL}/auth/google/callback")
+
+
+def google_redirect_uri():
+    """Use the configured callback, or the current HTTPS host in deployment."""
+    if request.host.endswith(".pythonanywhere.com"):
+        return f"https://{request.host}/auth/google/callback"
+    if os.environ.get("GOOGLE_REDIRECT_URI"):
+        return GOOGLE_REDIRECT_URI
+    return f"{request.host_url.rstrip('/')}/auth/google/callback"
 
 
 def db():
@@ -136,7 +146,7 @@ def google_login():
     session["oauth_state"] = os.urandom(24).hex()
     query = {
         "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "redirect_uri": google_redirect_uri(),
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
@@ -160,7 +170,7 @@ def google_callback():
         "code": code,
         "client_id": GOOGLE_CLIENT_ID,
         "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "redirect_uri": google_redirect_uri(),
         "grant_type": "authorization_code",
     }, timeout=15)
     if not token_response.ok:
