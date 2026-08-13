@@ -3,6 +3,13 @@ const $ = (selector) => document.querySelector(selector);
 const iconFor = (category) => ({ Electronics: '▣', Vehicle: '▱', Home: '⌂', Subscription: '◌', Equipment: '⚒' }[category] || '◈');
 const money = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(value || 0);
 
+// Sanitize HTML to prevent XSS
+const sanitize = (str) => {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+};
+
 async function loadData() {
   const [assetsResponse, summaryResponse, peopleResponse] = await Promise.all([fetch('/api/assets'), fetch('/api/summary'), fetch('/api/people')]);
   state.assets = await assetsResponse.json();
@@ -16,11 +23,16 @@ async function loadData() {
   renderAll();
   renderPeople();
   if (!state.assets.length) {
-    document.querySelector('.warning-card > strong').textContent = '0';
-    document.querySelector('.warning-card .warning').textContent = '● No deadlines yet';
-    document.querySelector('.reminder-list').innerHTML = '<p class="empty-copy">No reminders yet. Add an asset with a deadline to see it here.</p>';
-    document.querySelector('.insight-banner h3').textContent = 'Your workspace is ready for real information';
-    document.querySelector('.insight-banner p').textContent = 'Add your first asset or person to start building your private collection.';
+    const warningCard = document.querySelector('.warning-card > strong');
+    const warningText = document.querySelector('.warning-card .warning');
+    const reminderList = document.querySelector('.reminder-list');
+    const insightH3 = document.querySelector('.insight-banner h3');
+    const insightP = document.querySelector('.insight-banner p');
+    if (warningCard) warningCard.textContent = '0';
+    if (warningText) warningText.textContent = '● No deadlines yet';
+    if (reminderList) reminderList.innerHTML = '<p class="empty-copy">No reminders yet. Add an asset with a deadline to see it here.</p>';
+    if (insightH3) insightH3.textContent = 'Your workspace is ready for real information';
+    if (insightP) insightP.textContent = 'Add your first asset or person to start building your private collection.';
   }
 }
 
@@ -29,43 +41,54 @@ async function loadUser() {
   const user = await response.json();
   const profile = document.querySelector('.profile');
   const heading = document.querySelector('.welcome-row h1');
+  if (!profile || !heading) return;
   if (user) {
-    profile.querySelector('.avatar').textContent = (user.name || user.email || '?').slice(0, 1).toUpperCase();
-    profile.querySelector('strong').textContent = user.name || user.email;
-    profile.querySelector('small').textContent = user.email || 'Google account';
-    heading.innerHTML = `Welcome back, ${user.name || 'there'} <span>✦</span>`;
+    const avatar = profile.querySelector('.avatar');
+    const strong = profile.querySelector('strong');
+    const small = profile.querySelector('small');
+    if (avatar) avatar.textContent = (user.name || user.email || '?').slice(0, 1).toUpperCase();
+    if (strong) strong.textContent = user.name || user.email;
+    if (small) small.textContent = user.email || 'Google account';
+    heading.innerHTML = `Welcome back, ${sanitize(user.name || 'there')} <span>✦</span>`;
   } else {
     const login = document.createElement('a');
     login.className = 'secondary-button google-login';
     login.href = '/auth/google';
     login.textContent = 'Continue with Google';
-    document.querySelector('.top-actions').prepend(login);
+    const topActions = document.querySelector('.top-actions');
+    if (topActions) topActions.prepend(login);
     heading.innerHTML = 'Keep track of what matters <span>✦</span>';
   }
 }
 
 function assetRow(asset) {
-  return `<div class="asset-row"><span class="asset-symbol">${iconFor(asset.category)}</span><div class="asset-data"><strong>${asset.name}</strong><small>${asset.vendor || asset.category} · ${asset.document_name ? 'Document attached' : 'No document yet'}</small></div><div class="asset-price"><strong>${money(asset.price)}</strong><small>${asset.purchased_on || 'No date'}</small></div></div>`;
+  return `<div class="asset-row"><span class="asset-symbol">${iconFor(asset.category)}</span><div class="asset-data"><strong>${sanitize(asset.name)}</strong><small>${sanitize(asset.vendor || asset.category)} · ${asset.document_name ? 'Document attached' : 'No document yet'}</small></div><div class="asset-price"><strong>${money(asset.price)}</strong><small>${asset.purchased_on || 'No date'}</small></div></div>`;
 }
-function renderRecent() { $('#recent-assets').innerHTML = state.assets.slice(0, 4).map(assetRow).join(''); }
+function renderRecent() { const elem = $('#recent-assets'); if (elem) elem.innerHTML = state.assets.slice(0, 4).map(assetRow).join(''); }
 function renderAll() {
   const query = ($('#asset-search')?.value || '').toLowerCase();
-  $('#all-assets').innerHTML = state.assets.filter((asset) => `${asset.name} ${asset.vendor} ${asset.category}`.toLowerCase().includes(query)).map((asset) => `<article class="asset-card"><div class="asset-symbol">${iconFor(asset.category)}</div><h3>${asset.name}</h3><p>${asset.vendor || 'Personal'} · ${asset.category}</p><div class="asset-card-footer"><strong>${money(asset.price)}</strong><button data-delete="${asset.id}">Archive</button></div></article>`).join('');
+  const elem = $('#all-assets');
+  if (elem) elem.innerHTML = state.assets.filter((asset) => `${asset.name} ${asset.vendor} ${asset.category}`.toLowerCase().includes(query)).map((asset) => `<article class="asset-card"><div class="asset-symbol">${iconFor(asset.category)}</div><h3>${sanitize(asset.name)}</h3><p>${sanitize(asset.vendor || 'Personal')} · ${sanitize(asset.category)}</p><div class="asset-card-footer"><strong>${money(asset.price)}</strong><button data-delete="${asset.id}">Archive</button></div></article>`).join('');
 }
 function renderPeople() {
-  $('#people-count').textContent = state.people.length ? `${state.people.length} ${state.people.length === 1 ? 'person' : 'people'} added` : 'No people added yet';
-  $('#people-list').innerHTML = state.people.map((person) => `<article class="person-card"><span class="person-avatar">${person.name.slice(0, 1).toUpperCase()}</span><div><h3>${person.name}</h3><p>${person.role || 'No role or relationship added'}</p>${person.email ? `<small>${person.email}</small>` : ''}${person.phone ? `<small>${person.phone}</small>` : ''}</div><button data-delete-person="${person.id}">Remove</button></article>`).join('');
+  const countElem = $('#people-count');
+  const listElem = $('#people-list');
+  if (countElem) countElem.textContent = state.people.length ? `${state.people.length} ${state.people.length === 1 ? 'person' : 'people'} added` : 'No people added yet';
+  if (listElem) listElem.innerHTML = state.people.map((person) => `<article class="person-card"><span class="person-avatar">${sanitize(person.name).slice(0, 1).toUpperCase()}</span><div><h3>${sanitize(person.name)}</h3><p>${sanitize(person.role || 'No role or relationship added')}</p>${person.email ? `<small>${sanitize(person.email)}</small>` : ''}${person.phone ? `<small>${sanitize(person.phone)}</small>` : ''}</div><button data-delete-person="${person.id}">Remove</button></article>`).join('');
 }
 function showView(view) {
   const overview = $('#overview-view'); const assets = $('#assets-view'); const people = $('#people-view');
-  overview.classList.toggle('hidden', view !== 'overview'); assets.classList.toggle('hidden', view !== 'assets'); people.classList.toggle('hidden', view !== 'people');
-  $('#page-title').textContent = view === 'assets' ? 'My assets' : view === 'people' ? 'People' : 'Overview';
+  if (overview) overview.classList.toggle('hidden', view !== 'overview');
+  if (assets) assets.classList.toggle('hidden', view !== 'assets');
+  if (people) people.classList.toggle('hidden', view !== 'people');
+  const pageTitle = $('#page-title');
+  if (pageTitle) pageTitle.textContent = view === 'assets' ? 'My assets' : view === 'people' ? 'People' : 'Overview';
   document.querySelectorAll('.nav-item').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
   if (view === 'assets') renderAll();
   if (view === 'people') renderPeople();
 }
-function openModal() { $('#import-modal').classList.remove('hidden'); }
-function closeModal() { $('#import-modal').classList.add('hidden'); $('#form-status').textContent = ''; $('#upload-form').reset(); }
+function openModal() { const modal = $('#import-modal'); if (modal) modal.classList.remove('hidden'); }
+function closeModal() { const modal = $('#import-modal'); if (modal) modal.classList.add('hidden'); const status = $('#form-status'); if (status) status.textContent = ''; const form = $('#upload-form'); if (form) form.reset(); }
 
 document.addEventListener('click', async (event) => {
   const viewButton = event.target.closest('[data-view]');
@@ -91,7 +114,6 @@ $('#person-form').addEventListener('submit', async (event) => {
   if (!response.ok) { status.textContent = 'Please enter a name.'; return; }
   event.target.reset(); status.textContent = 'Person saved.'; await loadData();
 });
-$('#person-add-button').addEventListener('click', () => document.querySelector('#person-form input[name="name"]').focus());
-$('#reminder-button').addEventListener('click', () => alert('Reminder creation is next in the MVP roadmap.'));
+$('#person-add-button').addEventListener('click', () => document.querySelector('#person-form input[name="name"]')?.focus());
 loadData();
 loadUser();
