@@ -30,7 +30,7 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "local-development-key-change-me")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-APP_BASE_URL = os.environ.get("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "https://stratview.pythonanywhere.com").rstrip("/")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"{APP_BASE_URL}/auth/google/callback")
 
 
