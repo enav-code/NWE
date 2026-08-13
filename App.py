@@ -31,7 +31,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "local-development-key-c
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 APP_BASE_URL = os.environ.get("APP_BASE_URL", "https://stratview.pythonanywhere.com").rstrip("/")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"{APP_BASE_URL}/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"https://stratview.pythonanywhere.com/api/auth/google/callback")
 
 
 def google_redirect_uri():
