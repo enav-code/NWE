@@ -6,7 +6,9 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import boto3
 import requests
+from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
@@ -18,12 +20,43 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 DB_PATH = BASE_DIR / "keeply.db"
-UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Validate required environment variables
 if not os.environ.get("GOOGLE_CLIENT_ID") or not os.environ.get("GOOGLE_CLIENT_SECRET"):
     print("WARNING: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set. OAuth will not work.")
+
+# Cloudflare R2 (S3-compatible) object storage configuration.
+# Uploaded documents live in R2 rather than on local disk, since the
+# container's local filesystem is wiped on every redeploy.
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME")
+
+_missing_r2_vars = [
+    name
+    for name, value in (
+        ("R2_ACCOUNT_ID", R2_ACCOUNT_ID),
+        ("R2_ACCESS_KEY_ID", R2_ACCESS_KEY_ID),
+        ("R2_SECRET_ACCESS_KEY", R2_SECRET_ACCESS_KEY),
+        ("R2_BUCKET_NAME", R2_BUCKET_NAME),
+    )
+    if not value
+]
+if _missing_r2_vars:
+    raise RuntimeError(
+        "Missing required R2 environment variable(s): "
+        + ", ".join(_missing_r2_vars)
+        + ". Set these before starting the app so uploaded documents can be stored in Cloudflare R2."
+    )
+
+r2_client = boto3.client(
+    "s3",
+    endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+    aws_access_key_id=R2_ACCESS_KEY_ID,
+    aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+    region_name="auto",
+)
 
 app = Flask(__name__, static_folder="static")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
@@ -306,8 +339,7 @@ def import_document():
     
     try:
         content = upload.read()
-        file_path = UPLOAD_DIR / filename
-        file_path.write_bytes(content)
+        r2_client.put_object(Bucket=R2_BUCKET_NAME, Key=filename, Body=content)
         
         extracted = parse_extraction(filename, content)
         extracted["document_name"] = filename
@@ -327,6 +359,23 @@ def import_document():
         return jsonify({"error": "Failed to import document"}), 500
 
 
+@app.get("/api/documents/<path:filename>")
+def get_document(filename):
+    safe_filename = secure_filename(filename)
+    if not safe_filename:
+        return jsonify({"error": "Invalid filename"}), 400
+    try:
+        obj = r2_client.get_object(Bucket=R2_BUCKET_NAME, Key=safe_filename)
+        return (
+            obj["Body"].read(),
+            200,
+            {"Content-Type": obj.get("ContentType", "application/octet-stream")},
+        )
+    except ClientError as e:
+        logger.warning(f"Could not fetch document {safe_filename}: {e}")
+        return jsonify({"error": "Document not found"}), 404
+
+
 @app.delete("/api/assets/<int:asset_id>")
 def archive_asset(asset_id):
     try:
@@ -341,12 +390,10 @@ def archive_asset(asset_id):
             
             # Clean up uploaded file if exists
             if asset["document_name"]:
-                file_path = UPLOAD_DIR / asset["document_name"]
-                if file_path.exists():
-                    try:
-                        file_path.unlink()
-                    except Exception as e:
-                        logger.warning(f"Could not delete file {asset['document_name']}: {e}")
+                try:
+                    r2_client.delete_object(Bucket=R2_BUCKET_NAME, Key=asset["document_name"])
+                except ClientError as e:
+                    logger.warning(f"Could not delete file {asset['document_name']}: {e}")
         
         return jsonify({"ok": True})
     except Exception as e:
