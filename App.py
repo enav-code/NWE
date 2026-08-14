@@ -2,11 +2,12 @@ import html
 import logging
 import os
 import re
-import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import boto3
+import psycopg2
+import psycopg2.extras
 import requests
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
@@ -19,43 +20,51 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
-DB_PATH = BASE_DIR / "keeply.db"
+
+# Postgres (Supabase) connection string. Required — the app stores real
+# asset/reminder/people records, and a local SQLite file would be wiped on
+# every redeploy of the container, so this must point at a hosted database.
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "Missing required environment variable: DATABASE_URL. "
+        "Set this to your Supabase Postgres connection string before starting the app."
+    )
 
 # Validate required environment variables
 if not os.environ.get("GOOGLE_CLIENT_ID") or not os.environ.get("GOOGLE_CLIENT_SECRET"):
     print("WARNING: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not set. OAuth will not work.")
 
-# Cloudflare R2 (S3-compatible) object storage configuration.
-# Uploaded documents live in R2 rather than on local disk, since the
+# Backblaze B2 (S3-compatible) object storage configuration.
+# Uploaded documents live in B2 rather than on local disk, since the
 # container's local filesystem is wiped on every redeploy.
-R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
-R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
-R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
-R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME")
+B2_KEY_ID = os.environ.get("B2_KEY_ID")
+B2_APPLICATION_KEY = os.environ.get("B2_APPLICATION_KEY")
+B2_BUCKET_NAME = os.environ.get("B2_BUCKET_NAME")
+B2_REGION = os.environ.get("B2_REGION", "us-east-005")  # matches your bucket's region, e.g. us-west-004
 
-_missing_r2_vars = [
+_missing_b2_vars = [
     name
     for name, value in (
-        ("R2_ACCOUNT_ID", R2_ACCOUNT_ID),
-        ("R2_ACCESS_KEY_ID", R2_ACCESS_KEY_ID),
-        ("R2_SECRET_ACCESS_KEY", R2_SECRET_ACCESS_KEY),
-        ("R2_BUCKET_NAME", R2_BUCKET_NAME),
+        ("B2_KEY_ID", B2_KEY_ID),
+        ("B2_APPLICATION_KEY", B2_APPLICATION_KEY),
+        ("B2_BUCKET_NAME", B2_BUCKET_NAME),
     )
     if not value
 ]
-if _missing_r2_vars:
+if _missing_b2_vars:
     raise RuntimeError(
-        "Missing required R2 environment variable(s): "
-        + ", ".join(_missing_r2_vars)
-        + ". Set these before starting the app so uploaded documents can be stored in Cloudflare R2."
+        "Missing required B2 environment variable(s): "
+        + ", ".join(_missing_b2_vars)
+        + ". Set these before starting the app so uploaded documents can be stored in Backblaze B2."
     )
 
-r2_client = boto3.client(
+b2_client = boto3.client(
     "s3",
-    endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
-    aws_access_key_id=R2_ACCESS_KEY_ID,
-    aws_secret_access_key=R2_SECRET_ACCESS_KEY,
-    region_name="auto",
+    endpoint_url=f"https://s3.{B2_REGION}.backblazeb2.com",
+    aws_access_key_id=B2_KEY_ID,
+    aws_secret_access_key=B2_APPLICATION_KEY,
+    region_name=B2_REGION,
 )
 
 app = Flask(__name__, static_folder="static")
@@ -77,8 +86,7 @@ def google_redirect_uri():
 
 
 def db():
-    connection = sqlite3.connect(DB_PATH, check_same_thread=False)
-    connection.row_factory = sqlite3.Row
+    connection = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return connection
 
 
@@ -110,42 +118,47 @@ def validate_json_request():
 
 
 def init_db():
-    with db() as connection:
-        connection.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS assets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                category TEXT NOT NULL DEFAULT 'Other',
-                vendor TEXT DEFAULT '',
-                price REAL DEFAULT 0,
-                purchased_on TEXT DEFAULT '',
-                warranty_until TEXT DEFAULT '',
-                return_until TEXT DEFAULT '',
-                location TEXT DEFAULT 'Personal',
-                status TEXT NOT NULL DEFAULT 'active',
-                document_name TEXT DEFAULT '',
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS reminders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                asset_id INTEGER NOT NULL,
-                title TEXT NOT NULL,
-                due_on TEXT NOT NULL,
-                kind TEXT NOT NULL DEFAULT 'reminder',
-                FOREIGN KEY(asset_id) REFERENCES assets(id) ON DELETE CASCADE
-            );
-            CREATE TABLE IF NOT EXISTS people (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                role TEXT DEFAULT '',
-                email TEXT DEFAULT '',
-                phone TEXT DEFAULT '',
-                notes TEXT DEFAULT '',
-                created_at TEXT NOT NULL
-            );
-            """
-        )
+    connection = db()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS assets (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    category TEXT NOT NULL DEFAULT 'Other',
+                    vendor TEXT DEFAULT '',
+                    price REAL DEFAULT 0,
+                    purchased_on TEXT DEFAULT '',
+                    warranty_until TEXT DEFAULT '',
+                    return_until TEXT DEFAULT '',
+                    location TEXT DEFAULT 'Personal',
+                    status TEXT NOT NULL DEFAULT 'active',
+                    document_name TEXT DEFAULT '',
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS reminders (
+                    id SERIAL PRIMARY KEY,
+                    asset_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    due_on TEXT NOT NULL,
+                    kind TEXT NOT NULL DEFAULT 'reminder',
+                    FOREIGN KEY(asset_id) REFERENCES assets(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS people (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    role TEXT DEFAULT '',
+                    email TEXT DEFAULT '',
+                    phone TEXT DEFAULT '',
+                    notes TEXT DEFAULT '',
+                    created_at TEXT NOT NULL
+                );
+                """
+            )
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def asset_dict(row):
@@ -270,8 +283,13 @@ def current_user():
 @app.get("/api/assets")
 def list_assets():
     try:
-        with db() as connection:
-            rows = connection.execute("SELECT * FROM assets WHERE status != 'archived' ORDER BY created_at DESC").fetchall()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM assets WHERE status != 'archived' ORDER BY created_at DESC")
+                rows = cursor.fetchall()
+        finally:
+            connection.close()
         return jsonify([asset_dict(row) for row in rows])
     except Exception as e:
         logger.error(f"Error fetching assets: {e}")
@@ -304,14 +322,19 @@ def create_asset():
     return_until = sanitize_text(payload.get("return_until", ""), 50)
     
     try:
-        with db() as connection:
-            connection.execute("BEGIN")
-            cursor = connection.execute(
-                "INSERT INTO assets (name, category, vendor, price, purchased_on, warranty_until, return_until, location, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (name, category, vendor, price, purchased_on, warranty_until, return_until, location, datetime.utcnow().isoformat())
-            )
-            row = connection.execute("SELECT * FROM assets WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO assets (name, category, vendor, price, purchased_on, warranty_until, return_until, location, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                    (name, category, vendor, price, purchased_on, warranty_until, return_until, location, datetime.utcnow().isoformat())
+                )
+                new_id = cursor.fetchone()["id"]
+                cursor.execute("SELECT * FROM assets WHERE id = %s", (new_id,))
+                row = cursor.fetchone()
             connection.commit()
+        finally:
+            connection.close()
         return jsonify(asset_dict(row)), 201
     except Exception as e:
         logger.error(f"Error creating asset: {e}")
@@ -339,20 +362,25 @@ def import_document():
     
     try:
         content = upload.read()
-        r2_client.put_object(Bucket=R2_BUCKET_NAME, Key=filename, Body=content)
+        b2_client.put_object(Bucket=B2_BUCKET_NAME, Key=filename, Body=content)
         
         extracted = parse_extraction(filename, content)
         extracted["document_name"] = filename
         
-        with db() as connection:
-            connection.execute("BEGIN")
-            cursor = connection.execute(
-                "INSERT INTO assets (name, category, vendor, price, purchased_on, warranty_until, return_until, location, document_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (*extracted.values(), datetime.utcnow().isoformat())
-            )
-            row = connection.execute("SELECT * FROM assets WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO assets (name, category, vendor, price, purchased_on, warranty_until, return_until, location, document_name, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                    (*extracted.values(), datetime.utcnow().isoformat())
+                )
+                new_id = cursor.fetchone()["id"]
+                cursor.execute("SELECT * FROM assets WHERE id = %s", (new_id,))
+                row = cursor.fetchone()
             connection.commit()
-        
+        finally:
+            connection.close()
+
         return jsonify({"asset": asset_dict(row), "extracted": ["Item", "Price", "Purchase date", "Warranty", "Vendor"]}), 201
     except Exception as e:
         logger.error(f"Error importing document: {e}")
@@ -365,7 +393,7 @@ def get_document(filename):
     if not safe_filename:
         return jsonify({"error": "Invalid filename"}), 400
     try:
-        obj = r2_client.get_object(Bucket=R2_BUCKET_NAME, Key=safe_filename)
+        obj = b2_client.get_object(Bucket=B2_BUCKET_NAME, Key=safe_filename)
         return (
             obj["Body"].read(),
             200,
@@ -379,22 +407,26 @@ def get_document(filename):
 @app.delete("/api/assets/<int:asset_id>")
 def archive_asset(asset_id):
     try:
-        with db() as connection:
-            asset = connection.execute("SELECT document_name FROM assets WHERE id = ?", (asset_id,)).fetchone()
-            if not asset:
-                return jsonify({"error": "Asset not found"}), 404
-            
-            connection.execute("BEGIN")
-            connection.execute("UPDATE assets SET status = 'archived' WHERE id = ?", (asset_id,))
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT document_name FROM assets WHERE id = %s", (asset_id,))
+                asset = cursor.fetchone()
+                if not asset:
+                    return jsonify({"error": "Asset not found"}), 404
+
+                cursor.execute("UPDATE assets SET status = 'archived' WHERE id = %s", (asset_id,))
             connection.commit()
-            
+
             # Clean up uploaded file if exists
             if asset["document_name"]:
                 try:
-                    r2_client.delete_object(Bucket=R2_BUCKET_NAME, Key=asset["document_name"])
+                    b2_client.delete_object(Bucket=B2_BUCKET_NAME, Key=asset["document_name"])
                 except ClientError as e:
                     logger.warning(f"Could not delete file {asset['document_name']}: {e}")
-        
+        finally:
+            connection.close()
+
         return jsonify({"ok": True})
     except Exception as e:
         logger.error(f"Error archiving asset: {e}")
@@ -404,8 +436,13 @@ def archive_asset(asset_id):
 @app.get("/api/reminders")
 def list_reminders():
     try:
-        with db() as connection:
-            rows = connection.execute("SELECT reminders.*, assets.name AS asset_name FROM reminders JOIN assets ON assets.id = reminders.asset_id WHERE assets.status != 'archived' ORDER BY due_on").fetchall()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT reminders.*, assets.name AS asset_name FROM reminders JOIN assets ON assets.id = reminders.asset_id WHERE assets.status != 'archived' ORDER BY due_on")
+                rows = cursor.fetchall()
+        finally:
+            connection.close()
         return jsonify([dict(row) for row in rows])
     except Exception as e:
         logger.error(f"Error fetching reminders: {e}")
@@ -428,19 +465,25 @@ def create_reminder():
         return jsonify({"error": "asset_id, title, and due_on are required"}), 400
     
     try:
-        with db() as connection:
-            # Verify asset exists
-            asset = connection.execute("SELECT id FROM assets WHERE id = ?", (asset_id,)).fetchone()
-            if not asset:
-                return jsonify({"error": "Asset not found"}), 404
-            
-            connection.execute("BEGIN")
-            cursor = connection.execute(
-                "INSERT INTO reminders (asset_id, title, due_on, kind) VALUES (?, ?, ?, ?)",
-                (asset_id, title, due_on, kind)
-            )
-            row = connection.execute("SELECT * FROM reminders WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                # Verify asset exists
+                cursor.execute("SELECT id FROM assets WHERE id = %s", (asset_id,))
+                asset = cursor.fetchone()
+                if not asset:
+                    return jsonify({"error": "Asset not found"}), 404
+
+                cursor.execute(
+                    "INSERT INTO reminders (asset_id, title, due_on, kind) VALUES (%s, %s, %s, %s) RETURNING id",
+                    (asset_id, title, due_on, kind)
+                )
+                new_id = cursor.fetchone()["id"]
+                cursor.execute("SELECT * FROM reminders WHERE id = %s", (new_id,))
+                row = cursor.fetchone()
             connection.commit()
+        finally:
+            connection.close()
         return jsonify(dict(row)), 201
     except Exception as e:
         logger.error(f"Error creating reminder: {e}")
@@ -459,19 +502,24 @@ def update_reminder(reminder_id):
     kind = sanitize_text(payload.get("kind", "reminder"), 50)
     
     try:
-        with db() as connection:
-            # Verify reminder exists
-            reminder = connection.execute("SELECT id FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
-            if not reminder:
-                return jsonify({"error": "Reminder not found"}), 404
-            
-            connection.execute("BEGIN")
-            connection.execute(
-                "UPDATE reminders SET title = ?, due_on = ?, kind = ? WHERE id = ?",
-                (title, due_on, kind, reminder_id)
-            )
-            row = connection.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                # Verify reminder exists
+                cursor.execute("SELECT id FROM reminders WHERE id = %s", (reminder_id,))
+                reminder = cursor.fetchone()
+                if not reminder:
+                    return jsonify({"error": "Reminder not found"}), 404
+
+                cursor.execute(
+                    "UPDATE reminders SET title = %s, due_on = %s, kind = %s WHERE id = %s",
+                    (title, due_on, kind, reminder_id)
+                )
+                cursor.execute("SELECT * FROM reminders WHERE id = %s", (reminder_id,))
+                row = cursor.fetchone()
             connection.commit()
+        finally:
+            connection.close()
         return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error updating reminder: {e}")
@@ -481,14 +529,18 @@ def update_reminder(reminder_id):
 @app.delete("/api/reminders/<int:reminder_id>")
 def delete_reminder(reminder_id):
     try:
-        with db() as connection:
-            reminder = connection.execute("SELECT id FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
-            if not reminder:
-                return jsonify({"error": "Reminder not found"}), 404
-            
-            connection.execute("BEGIN")
-            connection.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id FROM reminders WHERE id = %s", (reminder_id,))
+                reminder = cursor.fetchone()
+                if not reminder:
+                    return jsonify({"error": "Reminder not found"}), 404
+
+                cursor.execute("DELETE FROM reminders WHERE id = %s", (reminder_id,))
             connection.commit()
+        finally:
+            connection.close()
         return jsonify({"ok": True})
     except Exception as e:
         logger.error(f"Error deleting reminder: {e}")
@@ -498,8 +550,14 @@ def delete_reminder(reminder_id):
 @app.get("/api/people")
 def list_people():
     try:
-        with db() as connection:
-            rows = connection.execute("SELECT * FROM people ORDER BY name COLLATE NOCASE").fetchall()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                # Postgres doesn't support SQLite's COLLATE NOCASE; use LOWER() instead
+                cursor.execute("SELECT * FROM people ORDER BY LOWER(name)")
+                rows = cursor.fetchall()
+        finally:
+            connection.close()
         return jsonify([person_dict(row) for row in rows])
     except Exception as e:
         logger.error(f"Error fetching people: {e}")
@@ -526,14 +584,19 @@ def create_person():
         return jsonify({"error": "Invalid email format"}), 400
     
     try:
-        with db() as connection:
-            connection.execute("BEGIN")
-            cursor = connection.execute(
-                "INSERT INTO people (name, role, email, phone, notes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                (name, role, email, phone, notes, datetime.utcnow().isoformat())
-            )
-            row = connection.execute("SELECT * FROM people WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO people (name, role, email, phone, notes, created_at) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                    (name, role, email, phone, notes, datetime.utcnow().isoformat())
+                )
+                new_id = cursor.fetchone()["id"]
+                cursor.execute("SELECT * FROM people WHERE id = %s", (new_id,))
+                row = cursor.fetchone()
             connection.commit()
+        finally:
+            connection.close()
         return jsonify(person_dict(row)), 201
     except Exception as e:
         logger.error(f"Error creating person: {e}")
@@ -543,14 +606,18 @@ def create_person():
 @app.delete("/api/people/<int:person_id>")
 def delete_person(person_id):
     try:
-        with db() as connection:
-            person = connection.execute("SELECT id FROM people WHERE id = ?", (person_id,)).fetchone()
-            if not person:
-                return jsonify({"error": "Person not found"}), 404
-            
-            connection.execute("BEGIN")
-            connection.execute("DELETE FROM people WHERE id = ?", (person_id,))
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id FROM people WHERE id = %s", (person_id,))
+                person = cursor.fetchone()
+                if not person:
+                    return jsonify({"error": "Person not found"}), 404
+
+                cursor.execute("DELETE FROM people WHERE id = %s", (person_id,))
             connection.commit()
+        finally:
+            connection.close()
         return jsonify({"ok": True})
     except Exception as e:
         logger.error(f"Error deleting person: {e}")
@@ -560,9 +627,15 @@ def delete_person(person_id):
 @app.get("/api/summary")
 def summary():
     try:
-        with db() as connection:
-            totals = connection.execute("SELECT COUNT(*) AS count, COALESCE(SUM(price), 0) AS value FROM assets WHERE status != 'archived'").fetchone()
-            categories = connection.execute("SELECT category, COUNT(*) AS count FROM assets WHERE status != 'archived' GROUP BY category ORDER BY count DESC").fetchall()
+        connection = db()
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) AS count, COALESCE(SUM(price), 0) AS value FROM assets WHERE status != 'archived'")
+                totals = cursor.fetchone()
+                cursor.execute("SELECT category, COUNT(*) AS count FROM assets WHERE status != 'archived' GROUP BY category ORDER BY count DESC")
+                categories = cursor.fetchall()
+        finally:
+            connection.close()
         return jsonify({"asset_count": totals["count"], "total_value": float(totals["value"]), "categories": [dict(row) for row in categories]})
     except Exception as e:
         logger.error(f"Error fetching summary: {e}")
