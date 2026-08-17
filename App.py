@@ -72,13 +72,13 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "local-development-key-change-me")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-APP_BASE_URL = os.environ.get("APP_BASE_URL", "stratview.pythonanywhere.com").rstrip("/")
-GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"stratview.pythonanywhere.com/api/auth/google/callback")
+APP_BASE_URL = os.environ.get("APP_BASE_URL", "keeply-afc7f.containers.snapdeploy.app").rstrip("/")
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", f"keeply-afc7f.containers.snapdeploy.app/api/auth/google/callback")
 
 
 def google_redirect_uri():
     """Use the configured callback, or the current HTTPS host in deployment."""
-    if request.host.endswith(".pythonanywhere.com"):
+    if request.host.endswith(".containers.snapdeploy.app"):
         return f"https://{request.host}/auth/google/callback"
     if os.environ.get("GOOGLE_REDIRECT_URI"):
         return GOOGLE_REDIRECT_URI
